@@ -1,0 +1,96 @@
+[
+  {
+    "id": "doc-business-hours",
+    "key": "business-hours",
+    "title": "Business Hours",
+    "intent": "business_hours_question",
+    "mailboxKeys": ["frontdesk", "owner"],
+    "contentType": "business_hours",
+    "content": {
+      "hoursByWeekday": {
+        "monday": "8:00 AM to 5:00 PM",
+        "tuesday": "8:00 AM to 5:00 PM",
+        "wednesday": "8:00 AM to 5:00 PM",
+        "thursday": "8:00 AM to 6:00 PM",
+        "friday": "8:00 AM to 4:00 PM",
+        "saturday": "9:00 AM to 12:00 PM",
+        "sunday": "closed"
+      }
+    },
+    "source": "local_seed",
+    "isActive": true,
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "doc-business-location",
+    "key": "business-location",
+    "title": "Office Location",
+    "intent": "location_question",
+    "mailboxKeys": ["frontdesk", "owner"],
+    "contentType": "address",
+    "content": {
+      "fullAddress": "1450 West Orchard Avenue, Suite 220, Springfield, IL 62704"
+    },
+    "source": "local_seed",
+    "isActive": true,
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "doc-booking-instructions",
+    "key": "booking-instructions",
+    "title": "Booking Instructions",
+    "intent": "booking_question",
+    "mailboxKeys": ["frontdesk"],
+    "contentType": "booking",
+    "content": {
+      "bookingLink": "https://local-demo.example/book",
+      "bookingNote": "If you do not see a time that works, reply with two options and a team member will help."
+    },
+    "source": "local_seed",
+    "isActive": true,
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "doc-required-documents",
+    "key": "required-documents",
+    "title": "Required Documents",
+    "intent": "required_documents_question",
+    "mailboxKeys": ["frontdesk", "owner"],
+    "contentType": "documents",
+    "content": {
+      "items": ["a photo ID", "your insurance card", "any completed intake paperwork"]
+    },
+    "source": "local_seed",
+    "isActive": true,
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "doc-parking-notes",
+    "key": "parking-notes",
+    "title": "Parking Notes",
+    "intent": "parking_question",
+    "mailboxKeys": ["frontdesk", "owner"],
+    "contentType": "parking",
+    "content": {
+      "instructions": "Guest parking is available in the front lot. Please use the spots marked Visitor and enter through the main lobby."
+    },
+    "source": "local_seed",
+    "isActive": true,
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "doc-booking-instructions-owner",
+    "key": "booking-instructions-owner",
+    "title": "Owner Booking Instructions",
+    "intent": "booking_question",
+    "mailboxKeys": ["owner"],
+    "contentType": "booking",
+    "content": {
+      "bookingLink": "https://owner-demo.example/review-booking",
+      "bookingNote": "Owner mailbox replies should direct guests to the internal review queue before confirming a time."
+    },
+    "source": "local_seed",
+    "isActive": true,
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  }
+]

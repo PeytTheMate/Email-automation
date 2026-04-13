@@ -1,0 +1,24 @@
+[
+  {
+    "id": "user-frontdesk",
+    "name": "Taylor Front Desk",
+    "email": "taylor@example.local",
+    "role": "front_desk",
+    "mailboxId": "mailbox-frontdesk",
+    "toneProfileOverrideId": null,
+    "automationProfileOverrideId": null,
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "user-owner",
+    "name": "Jordan Owner",
+    "email": "owner@example.local",
+    "role": "owner",
+    "mailboxId": "mailbox-owner",
+    "toneProfileOverrideId": "tone-concise-professional",
+    "automationProfileOverrideId": "auto-review-only",
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  }
+]

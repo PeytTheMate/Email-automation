@@ -1,0 +1,65 @@
+[
+  {
+    "id": "tone-warm-frontdesk",
+    "key": "warm-frontdesk",
+    "name": "Warm Front Desk",
+    "description": "Warm, concise, and helpful with one clear next step when useful.",
+    "greetingStyle": "warm",
+    "closingStyle": "warm",
+    "styleRules": {
+      "maxParagraphs": 2,
+      "maxSentences": 4,
+      "allowExclamation": false,
+      "offerNextStepWhenAvailable": true
+    },
+    "approvedClosings": [
+      "Please let us know if there is anything else we can help with."
+    ],
+    "forbiddenPhrases": ["No worries!", "Absolutely guaranteed"],
+    "signatureTemplate": "Front Desk Team",
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "tone-concise-professional",
+    "key": "concise-professional",
+    "name": "Concise Professional",
+    "description": "Short, calm, and professional wording suited to owner review.",
+    "greetingStyle": "friendly",
+    "closingStyle": "professional",
+    "styleRules": {
+      "maxParagraphs": 2,
+      "maxSentences": 4,
+      "allowExclamation": false,
+      "offerNextStepWhenAvailable": true
+    },
+    "approvedClosings": [
+      "Please reply if you need any additional help."
+    ],
+    "forbiddenPhrases": ["Hey!", "Totally"],
+    "signatureTemplate": "Operations Team",
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "tone-friendly-sales",
+    "key": "friendly-sales",
+    "name": "Friendly Sales",
+    "description": "Inviting and helpful tone with a gentle next-step CTA.",
+    "greetingStyle": "warm",
+    "closingStyle": "warm",
+    "styleRules": {
+      "maxParagraphs": 2,
+      "maxSentences": 5,
+      "allowExclamation": false,
+      "offerNextStepWhenAvailable": true
+    },
+    "approvedClosings": [
+      "Feel free to reply if you would like help choosing a time."
+    ],
+    "forbiddenPhrases": ["Best deal ever", "Guaranteed"],
+    "signatureTemplate": "Client Success Team",
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  }
+]

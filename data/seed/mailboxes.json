@@ -1,0 +1,50 @@
+[
+  {
+    "id": "mailbox-frontdesk",
+    "key": "frontdesk",
+    "displayName": "Front Desk Sandbox",
+    "emailAddress": "frontdesk@example.local",
+    "providerMode": "local_mock",
+    "defaultToneProfileId": "tone-warm-frontdesk",
+    "defaultAutomationProfileId": "auto-frontdesk-demo",
+    "escalationTarget": "owner@example.local",
+    "allowMockAutoSend": true,
+    "enabledIntents": [
+      "business_hours_question",
+      "location_question",
+      "booking_question",
+      "required_documents_question",
+      "parking_question",
+      "reschedule_request",
+      "billing_question",
+      "complaint",
+      "unknown"
+    ],
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "mailbox-owner",
+    "key": "owner",
+    "displayName": "Owner Review Sandbox",
+    "emailAddress": "owner@example.local",
+    "providerMode": "local_mock",
+    "defaultToneProfileId": "tone-concise-professional",
+    "defaultAutomationProfileId": "auto-review-only",
+    "escalationTarget": "owner@example.local",
+    "allowMockAutoSend": false,
+    "enabledIntents": [
+      "business_hours_question",
+      "location_question",
+      "booking_question",
+      "required_documents_question",
+      "parking_question",
+      "reschedule_request",
+      "billing_question",
+      "complaint",
+      "unknown"
+    ],
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  }
+]

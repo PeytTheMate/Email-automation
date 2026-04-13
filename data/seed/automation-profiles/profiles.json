@@ -1,0 +1,44 @@
+[
+  {
+    "id": "auto-frontdesk-demo",
+    "key": "frontdesk-demo",
+    "name": "Front Desk Demo",
+    "description": "Allows mock auto-send for the safest FAQ categories in the sandbox.",
+    "approvalMode": "mock_auto_send",
+    "allowedAutoSendIntents": [
+      "business_hours_question",
+      "location_question",
+      "booking_question",
+      "required_documents_question",
+      "parking_question"
+    ],
+    "blockedIntents": ["billing_question", "complaint", "unknown"],
+    "confidenceThresholdDraft": 0.8,
+    "confidenceThresholdAutoSend": 0.97,
+    "featureFlags": {
+      "allowReplayScenarios": true,
+      "useOnlyLocalProviders": true
+    },
+    "maxReplySentences": 4,
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "auto-review-only",
+    "key": "review-only",
+    "name": "Review Only",
+    "description": "Conservative profile for employee-specific review before any mock send.",
+    "approvalMode": "draft_only",
+    "allowedAutoSendIntents": [],
+    "blockedIntents": ["billing_question", "complaint", "unknown"],
+    "confidenceThresholdDraft": 0.8,
+    "confidenceThresholdAutoSend": 0.99,
+    "featureFlags": {
+      "allowReplayScenarios": true,
+      "useOnlyLocalProviders": true
+    },
+    "maxReplySentences": 4,
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
+  }
+]
