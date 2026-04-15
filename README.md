@@ -89,6 +89,7 @@ npm run dev
 
 - seeded as `Gmail Demo Pilot`
 - requires Gmail OAuth refresh-token env vars plus `ENABLE_GMAIL_READ`, `ENABLE_GMAIL_DRAFTS`, and `ENABLE_GMAIL_SEND`
+- supports hosted draft generation through either the OpenAI-compatible Responses path or the Gemini `generateContent` API key path
 - only syncs and sends for allowlisted test senders/recipients
 - supports `Sync Gmail Now`, `Create Gmail Draft`, and reviewed live send from the UI
 
@@ -125,21 +126,34 @@ See `docs/demo-script.md` for a polished walkthrough.
 
 ## Gmail demo setup
 
-1. Fill in the Gmail and remote-model variables in `.env`.
-2. Keep the seeded `mailbox-gmail-demo` mailbox on a dedicated Gmail test account or test label.
-3. Turn on the Gmail feature flags you need:
+1. Update `data/seed/mailboxes.json` so `mailbox-gmail-demo.gmailMailboxAddress` matches your real Gmail test mailbox.
+2. Keep the seeded `mailbox-gmail-demo` mailbox on a dedicated Gmail test account and the `codex-demo` label, or change the label there and reseed.
+3. Fill in the Gmail and remote-model variables in `.env`.
+4. Turn on the Gmail feature flags you need:
 
 ```bash
 ENABLE_GMAIL_READ=true
 ENABLE_GMAIL_DRAFTS=true
 ENABLE_GMAIL_SEND=true
 ENABLE_REMOTE_MODELS=true
-DEFAULT_MODEL_PROVIDER=remote
 ```
 
-4. Start the stack with `npm run dev`.
-5. In the dashboard, select `Gmail Demo Pilot` and click `Sync Gmail Now`.
-6. Review the generated reply, optionally click `Create Gmail Draft`, then use `Approve & Send Live Reply`.
+5. For Gemini API-key usage, set:
+
+```bash
+REMOTE_MODEL_PROVIDER=gemini
+REMOTE_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta
+REMOTE_MODEL_NAME=gemini-2.5-flash
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+You can also use `REMOTE_MODEL_API_KEY` instead of `GEMINI_API_KEY`.
+
+6. Reseed with `npm run seed`.
+7. Start the stack with `npm run dev`.
+8. Send a labeled test email from a different account. Gmail sync skips messages sent from the mailbox itself.
+9. In the dashboard, select `Gmail Demo Pilot` and click `Sync Gmail Now`.
+10. Review the generated reply, optionally click `Create Gmail Draft`, then use `Approve & Send Live Reply`.
 
 ## How to use the app
 
@@ -194,6 +208,7 @@ The current implementation has been verified with:
 - The `Settings` tab is a read-only seeded configuration snapshot, not a live admin editor yet.
 - The audit trail includes related message, draft, job, and outbox events for the selected message.
 - Gmail uses polling-first sync and env-provided OAuth credentials for the first pilot.
+- Gemini API-key support uses the official Google AI `generateContent` endpoint for hosted generation.
 - Live Gmail send remains review-only; unattended live auto-send is still intentionally out of scope.
 
 ## Phase 2 ideas

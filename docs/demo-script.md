@@ -16,10 +16,14 @@ Show leadership that this is an inspectable automation platform with both a safe
 If you want to show the live Gmail path:
 
 1. Set the Gmail OAuth env vars in `.env`
-2. Set `ENABLE_GMAIL_READ=true`
-3. Set `ENABLE_GMAIL_DRAFTS=true`
-4. Set `ENABLE_GMAIL_SEND=true`
-5. Keep the `Gmail Demo Pilot` mailbox restricted to alt/test accounts
+2. Set the hosted model vars for Gemini in `.env`
+3. Set `ENABLE_REMOTE_MODELS=true`
+4. Set `ENABLE_GMAIL_READ=true`
+5. Set `ENABLE_GMAIL_DRAFTS=true`
+6. Set `ENABLE_GMAIL_SEND=true`
+7. Update `data/seed/mailboxes.json` with the real Gmail demo address and reseed
+8. Keep the `Gmail Demo Pilot` mailbox restricted to alt/test accounts
+9. Send the demo email from a different mailbox because sync excludes self-sent mail
 
 ## Recommended walkthrough
 

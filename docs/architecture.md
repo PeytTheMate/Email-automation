@@ -177,6 +177,7 @@ The current Gmail implementation is polling-first and uses env-backed OAuth refr
 
 - one reviewed mailbox at a time
 - label-filtered sync
+- sync query is scoped to unread inbound mail and excludes self-sent mail from the mailbox account
 - allowlisted inbound senders
 - allowlisted outbound recipients
 - reviewed draft/send only
@@ -185,6 +186,8 @@ The current Gmail implementation is polling-first and uses env-backed OAuth refr
 
 The current hosted model path runs behind `ENABLE_REMOTE_MODELS` and validates output before draft persistence:
 
+- OpenAI-compatible providers use a Responses-style API request
+- Gemini API-key providers use the official `generateContent` endpoint
 - no unsupported URLs
 - no forbidden tone phrases
 - sentence-count cap

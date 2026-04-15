@@ -48,23 +48,50 @@ function findUnsupportedUrls(body: string, allowedFacts: string[]) {
   return urls.filter((url) => !allowedFacts.some((fact) => fact.includes(url)));
 }
 
-function buildAuthHeaders() {
+function normalizeBaseUrl(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function getRemoteApiKey() {
   const config = getConfig();
-  if (!config.ENABLE_REMOTE_MODELS || !config.REMOTE_MODEL_API_KEY) {
-    throw new Error("Remote model support requires ENABLE_REMOTE_MODELS=true and REMOTE_MODEL_API_KEY.");
+  if (!config.ENABLE_REMOTE_MODELS) {
+    throw new Error("Remote model support requires ENABLE_REMOTE_MODELS=true.");
   }
 
+  if (config.REMOTE_MODEL_PROVIDER === "gemini") {
+    const geminiApiKey =
+      config.REMOTE_MODEL_API_KEY ?? config.GEMINI_API_KEY ?? config.GOOGLE_API_KEY;
+
+    if (!geminiApiKey) {
+      throw new Error(
+        "Gemini support requires REMOTE_MODEL_API_KEY, GEMINI_API_KEY, or GOOGLE_API_KEY."
+      );
+    }
+
+    return geminiApiKey;
+  }
+
+  if (!config.REMOTE_MODEL_API_KEY) {
+    throw new Error(
+      "OpenAI-compatible remote model support requires REMOTE_MODEL_API_KEY."
+    );
+  }
+
+  return config.REMOTE_MODEL_API_KEY;
+}
+
+function buildOpenAiAuthHeaders() {
   return {
-    Authorization: `Bearer ${config.REMOTE_MODEL_API_KEY}`,
+    Authorization: `Bearer ${getRemoteApiKey()}`,
     "Content-Type": "application/json"
   };
 }
 
-async function callResponsesApi(input: string) {
+async function callOpenAiResponsesApi(input: string) {
   const config = getConfig();
-  const response = await fetch(`${config.REMOTE_MODEL_BASE_URL}/responses`, {
+  const response = await fetch(`${normalizeBaseUrl(config.REMOTE_MODEL_BASE_URL)}/responses`, {
     method: "POST",
-    headers: buildAuthHeaders(),
+    headers: buildOpenAiAuthHeaders(),
     body: JSON.stringify({
       model: config.REMOTE_MODEL_NAME,
       input,
@@ -87,6 +114,84 @@ async function callResponsesApi(input: string) {
   return payload.output_text.trim();
 }
 
+function extractGeminiText(payload: {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+}) {
+  const parts = payload.candidates?.[0]?.content?.parts ?? [];
+  const text = parts
+    .map((part) => part.text?.trim())
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+
+  if (!text) {
+    throw new Error("Gemini returned no text candidate.");
+  }
+
+  return text;
+}
+
+async function callGeminiGenerateContentApi(input: string) {
+  const config = getConfig();
+  const response = await fetch(
+    `${normalizeBaseUrl(config.REMOTE_MODEL_BASE_URL)}/models/${encodeURIComponent(config.REMOTE_MODEL_NAME)}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": getRemoteApiKey()
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: input
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: config.MAX_OUTPUT_TOKENS
+        }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Gemini model request failed with status ${response.status}.`);
+  }
+
+  const payload = (await response.json()) as {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{
+          text?: string;
+        }>;
+      };
+    }>;
+  };
+
+  return extractGeminiText(payload);
+}
+
+async function callRemoteModel(input: string) {
+  const config = getConfig();
+  if (config.REMOTE_MODEL_PROVIDER === "gemini") {
+    return callGeminiGenerateContentApi(input);
+  }
+
+  return callOpenAiResponsesApi(input);
+}
+
 function safeJsonParse<T>(value: string): T | null {
   try {
     return JSON.parse(value) as T;
@@ -96,7 +201,10 @@ function safeJsonParse<T>(value: string): T | null {
 }
 
 export class RemoteModelProvider implements ModelProvider {
-  providerName = "remote-openai-responses";
+  providerName =
+    getConfig().REMOTE_MODEL_PROVIDER === "gemini"
+      ? "remote-gemini-generate-content"
+      : "remote-openai-responses";
 
   async classifyIntent(request: ClassificationRequest): Promise<ClassificationResult | null> {
     const prompt = [
@@ -109,7 +217,7 @@ export class RemoteModelProvider implements ModelProvider {
     ].join("\n");
 
     try {
-      const raw = await callResponsesApi(prompt);
+      const raw = await callRemoteModel(prompt);
       const parsed = safeJsonParse<{
         intent?: Intent;
         confidence?: number;
@@ -172,7 +280,7 @@ export class RemoteModelProvider implements ModelProvider {
       `Original body: ${request.normalizedEmail.normalizedBodyText}`
     ].join("\n");
 
-    const raw = await callResponsesApi(prompt);
+    const raw = await callRemoteModel(prompt);
     if (raw.includes("NEEDS_HUMAN_REVIEW")) {
       throw new Error("Remote model flagged the message for human review.");
     }

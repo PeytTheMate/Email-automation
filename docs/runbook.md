@@ -54,16 +54,22 @@ curl http://localhost:4000/api/health
 
 ### Gmail demo pilot flow
 
-1. Configure the Gmail and hosted-model env vars in `.env`.
-2. Turn on `ENABLE_GMAIL_READ=true`.
-3. Turn on `ENABLE_GMAIL_DRAFTS=true` if you want provider draft creation.
-4. Turn on `ENABLE_GMAIL_SEND=true` only for allowlisted test recipients.
-5. Select `Gmail Demo Pilot` in the dashboard.
-6. Click `Sync Gmail Now`.
-7. Open the synced message from the inbox.
-8. Review the grounded draft.
-9. Optionally click `Create Gmail Draft`.
-10. Click `Approve & Send Live Reply` for a reviewed live send.
+1. Edit `data/seed/mailboxes.json` so `mailbox-gmail-demo.gmailMailboxAddress` is your real Gmail test mailbox and keep or update the label filter there.
+2. Configure the Gmail and hosted-model env vars in `.env`.
+3. Turn on `ENABLE_GMAIL_READ=true`.
+4. Turn on `ENABLE_GMAIL_DRAFTS=true` if you want provider draft creation.
+5. Turn on `ENABLE_GMAIL_SEND=true` only for allowlisted test recipients.
+6. For Gemini, set `REMOTE_MODEL_PROVIDER=gemini`, `REMOTE_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta`, and `REMOTE_MODEL_NAME=gemini-2.5-flash`.
+7. Set one of `REMOTE_MODEL_API_KEY`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY` to your Gemini API key.
+8. Reseed with `npm run seed`.
+9. Send a test email from a different account to the Gmail demo mailbox. Sync skips `-from:me`, so self-sent messages are intentionally ignored.
+10. Add the configured demo label to the inbound email if Gmail did not auto-apply it.
+11. Select `Gmail Demo Pilot` in the dashboard.
+12. Click `Sync Gmail Now`.
+13. Open the synced message from the inbox.
+14. Review the grounded draft.
+15. Optionally click `Create Gmail Draft`.
+16. Click `Approve & Send Live Reply` for a reviewed live send.
 
 ## Build, lint, and test
 
@@ -152,6 +158,7 @@ Check:
 3. the selected mailbox is `gmail_test`
 4. the Gmail account has the configured demo label
 5. the sender is on the mailbox or env allowlist
+6. the test email was sent from a different account, not the mailbox itself
 
 ### Gmail draft or send failed
 
@@ -214,4 +221,4 @@ The core generator path already supports the provider interface. Keep policy unc
 
 ### Hosted model provider
 
-The current hosted model provider uses the Responses API shape and validates output before draft persistence. Preserve the same conservative checks when adding more providers.
+The current hosted model provider supports both an OpenAI-compatible Responses path and a Gemini `generateContent` path, and validates output before draft persistence. Preserve the same conservative checks when adding more providers.

@@ -12,6 +12,7 @@ describe("remote model provider", () => {
   it("rejects generated replies that introduce unsupported URLs", async () => {
     process.env.ENABLE_REMOTE_MODELS = "true";
     process.env.REMOTE_MODEL_API_KEY = "test-key";
+    process.env.REMOTE_MODEL_PROVIDER = "openai";
     process.env.REMOTE_MODEL_NAME = "gpt-5-mini";
     resetConfigCache();
 
@@ -134,5 +135,67 @@ describe("remote model provider", () => {
         }
       })
     ).rejects.toThrow("unsupported URL");
+  });
+
+  it("parses Gemini generateContent responses for classification", async () => {
+    process.env.ENABLE_REMOTE_MODELS = "true";
+    process.env.REMOTE_MODEL_PROVIDER = "gemini";
+    process.env.GEMINI_API_KEY = "test-gemini-key";
+    process.env.REMOTE_MODEL_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+    process.env.REMOTE_MODEL_NAME = "gemini-2.5-flash";
+    resetConfigCache();
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      intent: "parking_question",
+                      confidence: 0.91,
+                      reasoningSummary: "Matched parking instructions language.",
+                      secondaryIntents: [],
+                      riskFlags: []
+                    })
+                  }
+                ]
+              }
+            }
+          ]
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        }
+      )
+    );
+
+    const provider = new RemoteModelProvider();
+    const result = await provider.classifyIntent({
+      normalizedEmail: {
+        messageId: "message-1",
+        senderEmail: "guest@example.com",
+        senderName: "Guest",
+        recipients: ["demo@example.com"],
+        ccRecipients: [],
+        subject: "Parking question",
+        normalizedBodyText: "Where should I park when I arrive?",
+        strippedQuotedText: null,
+        threadId: "thread-1",
+        receivedAt: "2026-04-12T10:00:00.000Z",
+        attachmentMetadata: [],
+        language: "en",
+        assumptions: []
+      }
+    });
+
+    expect(result).toMatchObject({
+      intent: "parking_question",
+      confidence: 0.91,
+      providerUsed: "remote-gemini-generate-content"
+    });
   });
 });

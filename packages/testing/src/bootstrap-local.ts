@@ -59,16 +59,18 @@ export async function ensureLocalBootstrap() {
 
 export function createLocalProviders(): LocalProviders {
   const config = getConfig();
-  if (!["mock", "ollama"].includes(config.DEFAULT_MODEL_PROVIDER)) {
+  if (!["mock", "ollama", "remote"].includes(config.DEFAULT_MODEL_PROVIDER)) {
     throw new Error(
-      "Local bootstrap supports DEFAULT_MODEL_PROVIDER values of 'mock' or 'ollama'."
+      "Local bootstrap supports DEFAULT_MODEL_PROVIDER values of 'mock', 'ollama', or 'remote'."
     );
   }
 
   const base = createBaseProviders();
   return {
     modelProvider:
-      config.DEFAULT_MODEL_PROVIDER === "ollama"
+      config.DEFAULT_MODEL_PROVIDER === "remote"
+        ? base.remoteModelProvider
+        : config.DEFAULT_MODEL_PROVIDER === "ollama"
         ? base.ollamaModelProvider
         : base.mockModelProvider,
     knowledgeProvider: base.knowledgeProvider,
