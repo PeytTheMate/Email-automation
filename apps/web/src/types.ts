@@ -2,6 +2,8 @@ export type InboxItem = {
   id: string;
   mailboxId: string;
   scenarioId?: string | null;
+  providerName?: string;
+  sourceType?: string;
   senderEmail: string;
   senderName: string | null;
   subject: string;
@@ -73,6 +75,12 @@ export type DashboardData = {
     recipientEmail: string;
     subject: string;
     body: string;
+    providerName: string;
+    externalDraftId?: string | null;
+    externalMessageId?: string | null;
+    deliveryStatus: string;
+    failureReason?: string | null;
+    operatorUserId?: string | null;
     sentAt: string;
     deliveryMode: string;
   }>;
@@ -80,6 +88,14 @@ export type DashboardData = {
     id: string;
     key: string;
     displayName: string;
+    providerMode: string;
+    connectionMode: string;
+    gmailMailboxAddress?: string | null;
+    gmailLabelFilter?: string | null;
+    enableLiveRead: boolean;
+    enableLiveDrafts: boolean;
+    enableLiveSend: boolean;
+    defaultModelProvider: string;
     defaultToneProfileId: string;
     defaultAutomationProfileId: string;
     allowMockAutoSend: boolean;
@@ -113,6 +129,12 @@ export type DashboardData = {
   }>;
   scenarios: ScenarioListItem[];
   scenarioResults: ScenarioRunResult[];
+  providerStatus: {
+    gmailReadEnabled: boolean;
+    gmailDraftsEnabled: boolean;
+    gmailSendEnabled: boolean;
+    remoteModelsEnabled: boolean;
+  };
   lastRefreshedAt: string;
 };
 
@@ -122,6 +144,10 @@ export type MessageDetail = {
     threadId?: string;
     actorUserId?: string | null;
     sourceMessageKey?: string | null;
+    providerName?: string;
+    externalMessageId?: string | null;
+    externalThreadId?: string | null;
+    externalHistoryId?: string | null;
     senderEmail: string;
     senderName: string | null;
     subject: string;
@@ -137,6 +163,8 @@ export type MessageDetail = {
     currentIntent: string | null;
     status: string;
     latestMessageId: string;
+    providerName?: string;
+    externalThreadId?: string | null;
   } | null;
   threadMessages: Array<{
     id: string;
@@ -177,6 +205,9 @@ export type MessageDetail = {
     id: string;
     subject?: string;
     toneProfileId?: string;
+    providerName?: string;
+    externalDraftId?: string | null;
+    externalMessageId?: string | null;
     body: string;
     status: string;
     confidenceNote: string;

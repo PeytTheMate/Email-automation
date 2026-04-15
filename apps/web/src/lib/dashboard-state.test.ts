@@ -51,8 +51,14 @@ const dashboard = {
       recipientEmail: "jamie@example.com",
       subject: "Re: Question two",
       body: "Hello Jamie",
+      providerName: "local-outbox",
+      externalDraftId: null,
+      externalMessageId: null,
+      deliveryStatus: "sent",
+      failureReason: null,
+      operatorUserId: null,
       sentAt: "2026-04-11T12:06:00.000Z",
-      deliveryMode: "mock"
+      deliveryMode: "mock_send"
     }
   ],
   mailboxes: [
@@ -60,6 +66,14 @@ const dashboard = {
       id: "mailbox-1",
       key: "frontdesk",
       displayName: "Front Desk",
+      providerMode: "local_mock",
+      connectionMode: "local_sandbox",
+      gmailMailboxAddress: null,
+      gmailLabelFilter: null,
+      enableLiveRead: false,
+      enableLiveDrafts: false,
+      enableLiveSend: false,
+      defaultModelProvider: "mock",
       defaultToneProfileId: "tone-1",
       defaultAutomationProfileId: "automation-1",
       allowMockAutoSend: true
@@ -71,6 +85,12 @@ const dashboard = {
   users: [],
   scenarios: [],
   scenarioResults: [],
+  providerStatus: {
+    gmailReadEnabled: false,
+    gmailDraftsEnabled: false,
+    gmailSendEnabled: false,
+    remoteModelsEnabled: false
+  },
   lastRefreshedAt: "2026-04-11T12:06:00.000Z"
 } satisfies DashboardData;
 

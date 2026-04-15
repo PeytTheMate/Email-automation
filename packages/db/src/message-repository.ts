@@ -34,6 +34,10 @@ export const messageRepository = {
         sourceMessageKey: input.sourceMessageKey ?? null,
         senderEmail: input.senderEmail,
         senderName: input.senderName,
+        providerName: input.providerName,
+        externalMessageId: input.externalMessageId ?? null,
+        externalThreadId: input.externalThreadId ?? null,
+        externalHistoryId: input.externalHistoryId ?? null,
         recipientsJson: toJson(input.recipients),
         ccRecipientsJson: toJson(input.ccRecipients),
         subject: input.subject,
@@ -136,6 +140,9 @@ export const messageRepository = {
         .update(threadsTable)
         .set({
           latestMessageId: thread.latestMessageId,
+          providerName: thread.providerName,
+          externalThreadId: thread.externalThreadId ?? null,
+          latestExternalHistoryId: thread.latestExternalHistoryId ?? null,
           currentIntent: thread.currentIntent,
           status: thread.status,
           updatedAt: thread.updatedAt
@@ -143,7 +150,22 @@ export const messageRepository = {
         .where(eq(threadsTable.id, thread.id))
         .run();
     } else {
-      getDb().insert(threadsTable).values(thread).run();
+      getDb()
+        .insert(threadsTable)
+        .values({
+          id: thread.id,
+          mailboxId: thread.mailboxId,
+          subject: thread.subject,
+          latestMessageId: thread.latestMessageId,
+          providerName: thread.providerName,
+          externalThreadId: thread.externalThreadId ?? null,
+          latestExternalHistoryId: thread.latestExternalHistoryId ?? null,
+          currentIntent: thread.currentIntent,
+          status: thread.status,
+          createdAt: thread.createdAt,
+          updatedAt: thread.updatedAt
+        })
+        .run();
     }
   },
   getThread(id: string) {
@@ -177,6 +199,9 @@ export const messageRepository = {
         subject: draft.subject,
         body: draft.body,
         toneProfileId: draft.toneProfileId,
+        providerName: draft.providerName,
+        externalDraftId: draft.externalDraftId ?? null,
+        externalMessageId: draft.externalMessageId ?? null,
         retrievedFactKeysJson: toJson(draft.retrievedFactKeys),
         confidenceNote: draft.confidenceNote,
         generationMetadataJson: toJson(draft.generationMetadata),
@@ -190,6 +215,9 @@ export const messageRepository = {
           subject: draft.subject,
           body: draft.body,
           toneProfileId: draft.toneProfileId,
+          providerName: draft.providerName,
+          externalDraftId: draft.externalDraftId ?? null,
+          externalMessageId: draft.externalMessageId ?? null,
           retrievedFactKeysJson: toJson(draft.retrievedFactKeys),
           confidenceNote: draft.confidenceNote,
           generationMetadataJson: toJson(draft.generationMetadata),
@@ -207,12 +235,19 @@ export const messageRepository = {
     const row = getDb().select().from(draftsTable).where(eq(draftsTable.id, id)).get();
     return row ? mapDraft(row) : null;
   },
-  updateDraft(id: string, body: string, status: DraftReply["status"]) {
+  updateDraft(id: string, body: string, status: DraftReply["status"], extras?: {
+    providerName?: string;
+    externalDraftId?: string | null;
+    externalMessageId?: string | null;
+  }) {
     getDb()
       .update(draftsTable)
       .set({
         body,
         status,
+        providerName: extras?.providerName,
+        externalDraftId: extras?.externalDraftId,
+        externalMessageId: extras?.externalMessageId,
         updatedAt: nowIso()
       })
       .where(eq(draftsTable.id, id))
@@ -245,7 +280,16 @@ export const messageRepository = {
       id: nanoid()
     };
 
-    getDb().insert(outboxTable).values(record).run();
+    getDb()
+      .insert(outboxTable)
+      .values({
+        ...record,
+        externalDraftId: record.externalDraftId ?? null,
+        externalMessageId: record.externalMessageId ?? null,
+        failureReason: record.failureReason ?? null,
+        operatorUserId: record.operatorUserId ?? null
+      })
+      .run();
     return record;
   },
   listOutbox() {

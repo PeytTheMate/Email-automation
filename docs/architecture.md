@@ -2,13 +2,13 @@
 
 ## Design goals
 
-This repository is designed as a platform-shaped local sandbox, not a throwaway prototype. The core pipeline is transport-agnostic and provider-driven so the same domain services can later be reused for Gmail ingestion, Gmail draft/send flows, and hosted model providers.
+This repository is designed as a platform-shaped local sandbox plus Gmail demo pilot, not a throwaway prototype. The core pipeline is transport-agnostic and provider-driven so the same domain services can run local replay/manual flows and a reviewed Gmail mailbox flow.
 
 ## High-level flow
 
 ```text
-Manual paste / seeded scenario
-  -> API ingest endpoint
+Manual paste / seeded scenario / Gmail sync
+  -> API ingest or Gmail sync endpoint
   -> SQLite message + processing job
   -> Worker or manual process trigger
   -> Normalization
@@ -16,8 +16,8 @@ Manual paste / seeded scenario
   -> Structured knowledge retrieval
   -> Policy engine
   -> Draft generation
-  -> Draft review or mock auto-send
-  -> Local outbox + audit trail
+  -> Draft review / provider draft / reviewed send
+  -> Delivery log + audit trail
 ```
 
 ## Repo responsibilities
@@ -27,9 +27,11 @@ Manual paste / seeded scenario
 Thin HTTP layer for:
 
 - manual email ingest
+- Gmail sync trigger
 - scenario replay
 - processing triggers
 - dashboard data
+- provider draft creation
 - draft approve/reject actions
 - sandbox reset/seed
 
@@ -89,11 +91,11 @@ Shared domain services:
 Swappable infrastructure adapters:
 
 - `knowledge-local`: reads trusted local business data
-- `model-local`: mock template provider plus an Ollama scaffold
+- `model-local`: mock template provider plus an Ollama local runtime adapter
 - `send-local`: writes to the local outbox
 - `email-local`: local provider shell
-- `email-gmail`: phase 2 scaffold
-- `model-remote`: phase 2 scaffold
+- `email-gmail`: polling sync plus Gmail draft/send adapter for the reviewed pilot
+- `model-remote`: hosted model provider with output validation and grounding guards
 
 ### `packages/testing`
 
@@ -109,9 +111,11 @@ The generator does not own business truth. Facts come only from `data/seed/knowl
 
 Generation never decides whether a reply can send. Policy is applied first and generation only runs when the policy allows drafting.
 
-### Local-only delivery
+### Delivery boundaries
 
-The send provider writes to the `outbox_messages` table only. No real SMTP or Gmail send path exists in local mode.
+- In `local_sandbox`, delivery writes only to `outbox_messages`.
+- In `gmail_test`, Gmail draft/send is allowed only when the mailbox enables it and the recipient matches the configured allowlist.
+- Live Gmail auto-send is intentionally disabled. Reviewed send is the only live delivery mode in this milestone.
 
 ## Current intent taxonomy
 
@@ -132,10 +136,12 @@ The closed taxonomy lives in `packages/schemas/src/index.ts`.
 Mailbox behavior is intentionally configuration-driven:
 
 - mailboxes select default tone and automation profiles
+- mailboxes choose connection mode and default model provider
+- mailboxes hold Gmail label filters, allowlists, and live delivery toggles
 - automation profiles define thresholds and approval mode
 - tone profiles define approved voice and constraints
 - knowledge documents define trusted facts
-- user records provide a future path for employee-level overrides
+- user records provide employee-level overrides and operator attribution
 
 ## Database model
 
@@ -156,15 +162,33 @@ Core tables:
 - `audit_logs`
 - `processing_jobs`
 
+Notable stored metadata additions:
+
+- mailbox Gmail sync cursor / history ID
+- external provider message/thread IDs
+- external draft/sent IDs for delivery reconciliation
+- provider name and delivery status on outbox records
+
 ## Provider expansion path
 
-### Gmail later
+### Gmail now
 
-Add Gmail support by implementing the `EmailProvider` interface in `packages/providers/email-gmail` and keeping the current `packages/core` pipeline unchanged.
+The current Gmail implementation is polling-first and uses env-backed OAuth refresh credentials. It is intentionally narrow:
 
-### Hosted models later
+- one reviewed mailbox at a time
+- label-filtered sync
+- allowlisted inbound senders
+- allowlisted outbound recipients
+- reviewed draft/send only
 
-Add hosted models by implementing `ModelProvider` in `packages/providers/model-remote` and keeping policy/budget controls unchanged.
+### Hosted models now
+
+The current hosted model path runs behind `ENABLE_REMOTE_MODELS` and validates output before draft persistence:
+
+- no unsupported URLs
+- no forbidden tone phrases
+- sentence-count cap
+- no generation when facts are missing
 
 ### Attachments later
 

@@ -4,7 +4,7 @@
     "key": "business-hours",
     "title": "Business Hours",
     "intent": "business_hours_question",
-    "mailboxKeys": ["frontdesk", "owner"],
+    "mailboxKeys": ["frontdesk", "owner", "gmail-demo"],
     "contentType": "business_hours",
     "content": {
       "hoursByWeekday": {
@@ -26,7 +26,7 @@
     "key": "business-location",
     "title": "Office Location",
     "intent": "location_question",
-    "mailboxKeys": ["frontdesk", "owner"],
+    "mailboxKeys": ["frontdesk", "owner", "gmail-demo"],
     "contentType": "address",
     "content": {
       "fullAddress": "1450 West Orchard Avenue, Suite 220, Springfield, IL 62704"
@@ -40,7 +40,7 @@
     "key": "booking-instructions",
     "title": "Booking Instructions",
     "intent": "booking_question",
-    "mailboxKeys": ["frontdesk"],
+    "mailboxKeys": ["frontdesk", "gmail-demo"],
     "contentType": "booking",
     "content": {
       "bookingLink": "https://local-demo.example/book",
@@ -55,7 +55,7 @@
     "key": "required-documents",
     "title": "Required Documents",
     "intent": "required_documents_question",
-    "mailboxKeys": ["frontdesk", "owner"],
+    "mailboxKeys": ["frontdesk", "owner", "gmail-demo"],
     "contentType": "documents",
     "content": {
       "items": ["a photo ID", "your insurance card", "any completed intake paperwork"]
@@ -69,7 +69,7 @@
     "key": "parking-notes",
     "title": "Parking Notes",
     "intent": "parking_question",
-    "mailboxKeys": ["frontdesk", "owner"],
+    "mailboxKeys": ["frontdesk", "owner", "gmail-demo"],
     "contentType": "parking",
     "content": {
       "instructions": "Guest parking is available in the front lot. Please use the spots marked Visitor and enter through the main lobby."

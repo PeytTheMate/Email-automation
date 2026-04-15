@@ -14,6 +14,16 @@ type MailboxSeed = {
   displayName: string;
   emailAddress: string | null;
   providerMode: string;
+  connectionMode?: string;
+  gmailMailboxAddress?: string | null;
+  gmailLabelFilter?: string | null;
+  allowedSenderPatterns?: string[];
+  allowedOutboundRecipientPatterns?: string[];
+  enableLiveRead?: boolean;
+  enableLiveDrafts?: boolean;
+  enableLiveSend?: boolean;
+  defaultModelProvider?: string;
+  gmailHistoryId?: string | null;
   defaultToneProfileId: string;
   defaultAutomationProfileId: string;
   escalationTarget: string;

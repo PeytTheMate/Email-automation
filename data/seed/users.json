@@ -20,5 +20,16 @@
     "automationProfileOverrideId": "auto-review-only",
     "createdAt": "2026-04-10T00:00:00.000Z",
     "updatedAt": "2026-04-10T00:00:00.000Z"
+  },
+  {
+    "id": "user-gmail-operator",
+    "name": "Avery Demo Operator",
+    "email": "avery@example.local",
+    "role": "pilot_operator",
+    "mailboxId": "mailbox-gmail-demo",
+    "toneProfileOverrideId": null,
+    "automationProfileOverrideId": "auto-review-only",
+    "createdAt": "2026-04-10T00:00:00.000Z",
+    "updatedAt": "2026-04-10T00:00:00.000Z"
   }
 ]

@@ -10,6 +10,13 @@ import { ingestEmail, processPendingJobs } from "./process-email.js";
 
 const DEFAULT_REPLAY_RECEIVED_AT = "2026-04-10T12:00:00.000Z";
 
+function resolveMailboxRecipient(mailbox: {
+  emailAddress: string | null;
+  gmailMailboxAddress?: string | null;
+}) {
+  return mailbox.emailAddress ?? mailbox.gmailMailboxAddress ?? "frontdesk@example.local";
+}
+
 export async function replayScenarios(args: {
   mailboxId: string;
   scenarioIds?: string[];
@@ -34,7 +41,7 @@ export async function replayScenarios(args: {
         scenarioId: scenario.id,
         senderEmail: scenario.senderEmail,
         senderName: scenario.senderName,
-        recipients: [mailbox.emailAddress ?? "frontdesk@example.local"],
+        recipients: [resolveMailboxRecipient(mailbox)],
         subject: scenario.subject,
         rawBody: scenario.body,
         receivedAt: scenario.replayReceivedAt ?? DEFAULT_REPLAY_RECEIVED_AT

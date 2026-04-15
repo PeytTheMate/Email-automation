@@ -35,6 +35,19 @@ export const settingsRepository = {
     const row = getDb().select().from(mailboxesTable).where(eq(mailboxesTable.key, key)).get();
     return row ? mapMailbox(row) : null;
   },
+  updateMailboxRuntime(id: string, updates: {
+    gmailHistoryId?: string | null;
+    updatedAt?: string;
+  }) {
+    getDb()
+      .update(mailboxesTable)
+      .set({
+        gmailHistoryId: updates.gmailHistoryId,
+        updatedAt: updates.updatedAt ?? new Date().toISOString()
+      })
+      .where(eq(mailboxesTable.id, id))
+      .run();
+  },
   listUsers() {
     return getDb().select().from(usersTable).orderBy(asc(usersTable.name)).all().map(mapUser);
   },

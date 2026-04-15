@@ -9,8 +9,10 @@ import type { DraftReply, EmailMessage } from "../../../schemas/src/index.js";
 import { emailMessageSchema } from "../../../schemas/src/index.js";
 
 import type {
+  EmailProvider,
   KnowledgeProvider,
   ModelProvider,
+  ProviderRegistry,
   SendProvider
 } from "../contracts.js";
 import { applyPolicy } from "./apply-policy.js";
@@ -34,6 +36,10 @@ export async function ingestEmail(input: {
   threadId?: string | null;
   actorUserId?: string | null;
   sourceMessageKey?: string | null;
+  providerName?: string;
+  externalMessageId?: string | null;
+  externalThreadId?: string | null;
+  externalHistoryId?: string | null;
   senderEmail: string;
   senderName: string | null;
   recipients: string[];
@@ -78,6 +84,10 @@ export async function ingestEmail(input: {
     actorUserId: input.actorUserId ?? null,
     sourceMessageKey: input.sourceMessageKey ?? null,
     scenarioId: input.scenarioId ?? null,
+    providerName: input.providerName ?? "local-email-sandbox",
+    externalMessageId: input.externalMessageId ?? null,
+    externalThreadId: input.externalThreadId ?? null,
+    externalHistoryId: input.externalHistoryId ?? null,
     threadId,
     senderEmail: input.senderEmail,
     senderName: input.senderName ?? null,
@@ -96,6 +106,9 @@ export async function ingestEmail(input: {
     mailboxId: message.mailboxId,
     subject: message.subject,
     latestMessageId: message.id,
+    providerName: message.providerName,
+    externalThreadId: message.externalThreadId,
+    latestExternalHistoryId: message.externalHistoryId,
     currentIntent: null,
     status: "new",
     createdAt: timestamp,
@@ -130,9 +143,10 @@ export async function ingestEmail(input: {
 }
 
 export async function processPendingJobs(args: {
-  modelProvider: ModelProvider;
-  knowledgeProvider: KnowledgeProvider;
-  sendProvider: SendProvider;
+  modelProvider?: ModelProvider;
+  knowledgeProvider?: KnowledgeProvider;
+  sendProvider?: SendProvider;
+  providerRegistry?: ProviderRegistry;
 }) {
   const jobs = processingRepository.listPending();
   const results = [];
@@ -148,7 +162,8 @@ export async function processPendingJobs(args: {
         messageId: claimed.messageId,
         modelProvider: args.modelProvider,
         knowledgeProvider: args.knowledgeProvider,
-        sendProvider: args.sendProvider
+        sendProvider: args.sendProvider,
+        providerRegistry: args.providerRegistry
       });
       processingRepository.complete(claimed.id);
       results.push(result);
@@ -177,9 +192,10 @@ export async function processPendingJobs(args: {
 
 export async function processMessage(args: {
   messageId: string;
-  modelProvider: ModelProvider;
-  knowledgeProvider: KnowledgeProvider;
-  sendProvider: SendProvider;
+  modelProvider?: ModelProvider;
+  knowledgeProvider?: KnowledgeProvider;
+  sendProvider?: SendProvider;
+  providerRegistry?: ProviderRegistry;
 }) {
   const rawMessage = messageRepository.get(args.messageId);
   if (!rawMessage) {
@@ -189,6 +205,17 @@ export async function processMessage(args: {
   const mailbox = settingsRepository.getMailbox(rawMessage.mailboxId);
   if (!mailbox) {
     throw new Error(`Mailbox ${rawMessage.mailboxId} was not found.`);
+  }
+
+  const modelProvider =
+    args.providerRegistry?.getModelProvider(mailbox) ?? args.modelProvider;
+  const knowledgeProvider =
+    args.providerRegistry?.getKnowledgeProvider(mailbox) ?? args.knowledgeProvider;
+  const sendProvider =
+    args.providerRegistry?.getSendProvider(mailbox) ?? args.sendProvider;
+
+  if (!modelProvider || !knowledgeProvider || !sendProvider) {
+    throw new Error("Runtime providers were not configured.");
   }
 
   const actingUser = resolveActingUser({
@@ -236,7 +263,7 @@ export async function processMessage(args: {
   const classification = await classifyIntent({
     messageId: rawMessage.id,
     normalizedEmail,
-    modelProvider: args.modelProvider
+    modelProvider
   });
   processingRepository.saveClassification(classification);
   processingRepository.log({
@@ -251,7 +278,7 @@ export async function processMessage(args: {
     entities: classification.extractedEntities,
     mailbox,
     receivedAt: rawMessage.receivedAt,
-    knowledgeProvider: args.knowledgeProvider
+    knowledgeProvider
   });
   processingRepository.log({
     entityType: "message",
@@ -296,7 +323,7 @@ export async function processMessage(args: {
         mailbox,
         automationProfile
       },
-      modelProvider: args.modelProvider
+      modelProvider
     });
     messageRepository.saveDraft(draft);
     processingRepository.log({
@@ -307,15 +334,30 @@ export async function processMessage(args: {
     });
   }
 
-  if (policyDecision.action === "auto_send_allowed" && policyDecision.allowMockAutoSend && draft) {
-    const outboxMessage = await args.sendProvider.sendMockReply({
+  const autoSendDraft = draft;
+  const canAutoSendMock =
+    mailbox.connectionMode === "local_sandbox" &&
+    policyDecision.action === "auto_send_allowed" &&
+    policyDecision.allowMockAutoSend &&
+    autoSendDraft !== null;
+
+  if (canAutoSendMock) {
+    const outboxMessage = await sendProvider.sendReply({
       messageId: rawMessage.id,
-      draft,
+      mailbox,
+      draft: autoSendDraft,
       recipientEmail: rawMessage.senderEmail,
+      operatorUserId: rawMessage.actorUserId ?? null,
+      externalThreadId: rawMessage.externalThreadId,
+      externalMessageId: rawMessage.externalMessageId,
       deliveryMode: "mock_auto_send"
     });
 
-    messageRepository.updateDraft(draft.id, draft.body, "mock_sent");
+    messageRepository.updateDraft(autoSendDraft.id, autoSendDraft.body, "mock_sent", {
+      providerName: outboxMessage.providerName,
+      externalDraftId: outboxMessage.externalDraftId,
+      externalMessageId: outboxMessage.externalMessageId
+    });
     messageRepository.updateStatus(rawMessage.id, "auto_sent");
     processingRepository.log({
       entityType: "outbox",
@@ -326,7 +368,7 @@ export async function processMessage(args: {
   } else {
     messageRepository.updateStatus(
       rawMessage.id,
-      policyDecision.action === "draft_only"
+      policyDecision.action === "draft_only" || policyDecision.action === "auto_send_allowed"
         ? "draft_ready"
         : policyDecision.action === "escalate"
           ? "escalated"
@@ -339,15 +381,17 @@ export async function processMessage(args: {
     mailboxId: rawMessage.mailboxId,
     subject: rawMessage.subject,
     latestMessageId: rawMessage.id,
+    providerName: rawMessage.providerName,
+    externalThreadId: rawMessage.externalThreadId,
+    latestExternalHistoryId: rawMessage.externalHistoryId,
     currentIntent: classification.intent,
-    status:
-      policyDecision.action === "auto_send_allowed" && policyDecision.allowMockAutoSend
-        ? "auto_sent"
-        : policyDecision.action === "draft_only"
-          ? "draft_ready"
-          : policyDecision.action === "escalate"
-            ? "escalated"
-            : "blocked",
+    status: canAutoSendMock
+      ? "auto_sent"
+      : policyDecision.action === "draft_only" || policyDecision.action === "auto_send_allowed"
+        ? "draft_ready"
+        : policyDecision.action === "escalate"
+          ? "escalated"
+          : "blocked",
     createdAt: rawMessage.createdAt,
     updatedAt: new Date().toISOString()
   });
@@ -360,5 +404,72 @@ export async function processMessage(args: {
     retrieval,
     policyDecision,
     draft
+  };
+}
+
+export async function syncMailbox(args: {
+  mailboxId: string;
+  providerRegistry: ProviderRegistry;
+  limit?: number;
+}) {
+  const mailbox = settingsRepository.getMailbox(args.mailboxId);
+  if (!mailbox) {
+    throw new Error("Mailbox not found.");
+  }
+
+  const emailProvider: EmailProvider = args.providerRegistry.getEmailProvider(mailbox);
+  const syncResult = await emailProvider.listMessages({
+    mailbox,
+    limit: args.limit,
+    syncCursor: mailbox.gmailHistoryId
+  });
+
+  const ingested = [];
+  for (const inbound of syncResult.messages) {
+    ingested.push(
+      await ingestEmail({
+        mailboxId: mailbox.id,
+        sourceType: "gmail_sync",
+        actorUserId: settingsRepository.getPrimaryUserForMailbox(mailbox.id)?.id ?? null,
+        sourceMessageKey: inbound.sourceMessageKey,
+        providerName: inbound.providerName,
+        externalMessageId: inbound.externalMessageId,
+        externalThreadId: inbound.externalThreadId,
+        externalHistoryId: inbound.externalHistoryId,
+        threadId: inbound.externalThreadId
+          ? `thread-gmail-${inbound.externalThreadId}`
+          : undefined,
+        senderEmail: inbound.senderEmail,
+        senderName: inbound.senderName,
+        recipients: inbound.recipients,
+        ccRecipients: inbound.ccRecipients,
+        subject: inbound.subject,
+        rawBody: inbound.rawBody,
+        receivedAt: inbound.receivedAt
+      })
+    );
+  }
+
+  settingsRepository.updateMailboxRuntime(mailbox.id, {
+    gmailHistoryId: syncResult.nextSyncCursor
+  });
+
+  processingRepository.log({
+    entityType: "message",
+    entityId: mailbox.id,
+    eventType: "gmail_sync_completed",
+    payload: {
+      mailboxId: mailbox.id,
+      providerName: syncResult.providerName,
+      syncedCount: syncResult.messages.length,
+      ingestedCount: ingested.length,
+      nextSyncCursor: syncResult.nextSyncCursor
+    }
+  });
+
+  return {
+    mailbox,
+    syncedCount: syncResult.messages.length,
+    ingested
   };
 }

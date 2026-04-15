@@ -30,6 +30,7 @@ export const emailStatusSchema = z.enum([
   "new",
   "processing",
   "draft_ready",
+  "draft_created",
   "auto_sent",
   "sent",
   "escalated",
@@ -48,6 +49,21 @@ export const approvalModeSchema = z.enum([
   "observe_only",
   "draft_only",
   "mock_auto_send"
+]);
+
+export const modelProviderKeySchema = z.enum(["mock", "ollama", "remote"]);
+
+export const deliveryModeSchema = z.enum([
+  "draft",
+  "send_after_approval",
+  "mock_send",
+  "mock_auto_send"
+]);
+
+export const deliveryStatusSchema = z.enum([
+  "draft_created",
+  "sent",
+  "failed"
 ]);
 
 export const processingJobStatusSchema = z.enum([
@@ -72,11 +88,15 @@ export const extractedEntitiesSchema = z.object({
 export const emailMessageSchema = z.object({
   id: z.string(),
   mailboxId: z.string(),
-  sourceType: z.enum(["manual_paste", "seeded_scenario", "replay"]),
+  sourceType: z.enum(["manual_paste", "seeded_scenario", "replay", "gmail_sync"]),
   threadId: z.string(),
   actorUserId: z.string().nullable().optional(),
   sourceMessageKey: z.string().nullable().optional(),
   scenarioId: z.string().nullable().optional(),
+  providerName: z.string().default("local-email-sandbox"),
+  externalMessageId: z.string().nullable().default(null),
+  externalThreadId: z.string().nullable().default(null),
+  externalHistoryId: z.string().nullable().default(null),
   senderEmail: z.string().email(),
   senderName: z.string().nullable(),
   recipients: z.array(z.string().email()).default([]),
@@ -93,6 +113,9 @@ export const emailThreadSchema = z.object({
   mailboxId: z.string(),
   subject: z.string(),
   latestMessageId: z.string(),
+  providerName: z.string().default("local-email-sandbox"),
+  externalThreadId: z.string().nullable().default(null),
+  latestExternalHistoryId: z.string().nullable().default(null),
   currentIntent: intentSchema.nullable(),
   status: emailStatusSchema,
   createdAt: z.string(),
@@ -197,6 +220,9 @@ export const draftReplySchema = z.object({
   subject: z.string(),
   body: z.string(),
   toneProfileId: z.string(),
+  providerName: z.string().default("internal-draft"),
+  externalDraftId: z.string().nullable().default(null),
+  externalMessageId: z.string().nullable().default(null),
   retrievedFactKeys: z.array(z.string()),
   confidenceNote: z.string(),
   generationMetadata: z.object({
@@ -223,7 +249,17 @@ export const mailboxSettingsSchema = z.object({
   key: z.string(),
   displayName: z.string(),
   emailAddress: z.string().nullable(),
-  providerMode: z.enum(["local_mock", "gmail_future"]),
+  providerMode: z.enum(["local_mock", "gmail_test"]),
+  connectionMode: z.enum(["local_sandbox", "gmail_test"]).default("local_sandbox"),
+  gmailMailboxAddress: z.string().email().nullable().default(null),
+  gmailLabelFilter: z.string().nullable().default(null),
+  allowedSenderPatterns: z.array(z.string()).default([]),
+  allowedOutboundRecipientPatterns: z.array(z.string()).default([]),
+  enableLiveRead: z.boolean().default(false),
+  enableLiveDrafts: z.boolean().default(false),
+  enableLiveSend: z.boolean().default(false),
+  defaultModelProvider: modelProviderKeySchema.default("mock"),
+  gmailHistoryId: z.string().nullable().default(null),
   defaultToneProfileId: z.string(),
   defaultAutomationProfileId: z.string(),
   escalationTarget: z.string(),
@@ -264,8 +300,14 @@ export const outboxMessageSchema = z.object({
   recipientEmail: z.string(),
   subject: z.string(),
   body: z.string(),
+  providerName: z.string(),
+  externalDraftId: z.string().nullable().default(null),
+  externalMessageId: z.string().nullable().default(null),
+  deliveryStatus: deliveryStatusSchema,
+  failureReason: z.string().nullable().default(null),
+  operatorUserId: z.string().nullable().default(null),
   sentAt: z.string(),
-  deliveryMode: z.enum(["mock_send", "mock_auto_send"])
+  deliveryMode: deliveryModeSchema
 });
 
 export const scenarioSchema = z.object({
@@ -326,3 +368,6 @@ export type ProcessingJob = z.infer<typeof processingJobSchema>;
 export type OutboxMessage = z.infer<typeof outboxMessageSchema>;
 export type Scenario = z.infer<typeof scenarioSchema>;
 export type ScenarioRunResult = z.infer<typeof scenarioRunResultSchema>;
+export type ModelProviderKey = z.infer<typeof modelProviderKeySchema>;
+export type DeliveryMode = z.infer<typeof deliveryModeSchema>;
+export type DeliveryStatus = z.infer<typeof deliveryStatusSchema>;

@@ -1,22 +1,22 @@
 import { getConfig } from "../../../packages/config/src/index.js";
 import { processPendingJobs } from "../../../packages/core/src/index.js";
 import {
-  createLocalProviders,
-  ensureLocalBootstrap
+  createRuntimeProviderRegistry,
+  ensureRuntimeBootstrap
 } from "../../../packages/testing/src/bootstrap-local.js";
 
 const config = getConfig();
-const providers = createLocalProviders();
+const providerRegistry = createRuntimeProviderRegistry();
 
 async function tick() {
-  const processed = await processPendingJobs(providers);
+  const processed = await processPendingJobs({ providerRegistry });
   if (processed.length > 0) {
     console.log(`Worker processed ${processed.length} job(s).`);
   }
 }
 
 async function start() {
-  await ensureLocalBootstrap();
+  await ensureRuntimeBootstrap();
   console.log("Worker started.");
   await tick();
   setInterval(() => {

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Show leadership that this is an inspectable local automation platform with a safe path toward Google Workspace production integration.
+Show leadership that this is an inspectable automation platform with both a safe local sandbox and a reviewed Gmail pilot path.
 
 ## Prep
 
@@ -11,13 +11,23 @@ Show leadership that this is an inspectable local automation platform with a saf
 3. Run `npm run dev`
 4. Open [http://localhost:5173](http://localhost:5173)
 
+### Optional Gmail pilot prep
+
+If you want to show the live Gmail path:
+
+1. Set the Gmail OAuth env vars in `.env`
+2. Set `ENABLE_GMAIL_READ=true`
+3. Set `ENABLE_GMAIL_DRAFTS=true`
+4. Set `ENABLE_GMAIL_SEND=true`
+5. Keep the `Gmail Demo Pilot` mailbox restricted to alt/test accounts
+
 ## Recommended walkthrough
 
 ### 1. Start with the product framing
 
 Say:
 
-> This is a local-first email automation sandbox. It simulates repetitive inbox work safely, keeps business facts in structured local sources, and can later reuse the same core pipeline for Gmail.
+> This starts as a safe local-first sandbox, but the same core pipeline can now also power a reviewed Gmail pilot mailbox with explicit provider controls and auditability.
 
 ### 2. Run the polished pack
 
@@ -30,6 +40,18 @@ Explain:
 - every seeded demo scenario is replayed locally
 - the lab shows expected vs actual intent, routing, and reply grounding
 - this is a concrete regression surface, not just a pretty mockup
+
+### 2b. Optional Gmail live pass
+
+If the Gmail pilot is configured:
+
+1. Select `Gmail Demo Pilot`
+2. Click `Sync Gmail Now`
+3. Open the synced inbox item
+4. Show the external provider metadata and risk/policy trace
+5. Click `Create Gmail Draft`
+6. Click `Approve & Send Live Reply`
+7. Switch to `Delivery Log` and point out the provider status plus external IDs
 
 ### 2a. Exact click path for the showcase
 
@@ -48,7 +70,7 @@ Use this order if you want a smooth 3 to 5 minute demo:
 
 - Point out the manual paste form
 - Point out the seeded scenario selector and `Load Into Composer`
-- Explain that nothing here sends real email
+- Explain that local mailboxes never send real email and that Gmail send is separately gated
 
 ### 4. Replay or open a safe FAQ
 
@@ -115,13 +137,13 @@ Explain:
 - automation thresholds are config-driven
 - business facts come from local structured files
 - mailbox bindings decide which documents can be used for a given mailbox
-- Gmail and hosted model providers are scaffolded but intentionally disabled in local v1
+- Gmail and hosted model providers are implemented but feature-flagged and allowlist-gated for the pilot
 
 ## Operator notes during the demo
 
 - `Inbox` is the operational review screen
 - `Replay Lab` is the scenario scoring and QA screen
-- `Outbox` proves what was mock-sent locally
+- `Delivery Log` proves whether a reply was mock-sent, drafted in Gmail, or sent live
 - `Settings` shows that behavior is configuration-driven
 - `Settings` is currently a read-only seeded configuration snapshot
 
@@ -131,4 +153,4 @@ Explain:
 - Facts come from structured data, not model memory
 - Policy decides send eligibility
 - The audit trail includes related message, draft, job, and outbox events for the selected message
-- The same domain pipeline can later plug into Gmail
+- The same domain pipeline serves both local sandbox and Gmail pilot modes

@@ -16,6 +16,16 @@ export const seedRepository = {
     displayName: string;
     emailAddress: string | null;
     providerMode: string;
+    connectionMode?: string;
+    gmailMailboxAddress?: string | null;
+    gmailLabelFilter?: string | null;
+    allowedSenderPatterns?: string[];
+    allowedOutboundRecipientPatterns?: string[];
+    enableLiveRead?: boolean;
+    enableLiveDrafts?: boolean;
+    enableLiveSend?: boolean;
+    defaultModelProvider?: string;
+    gmailHistoryId?: string | null;
     defaultToneProfileId: string;
     defaultAutomationProfileId: string;
     escalationTarget: string;
@@ -25,7 +35,27 @@ export const seedRepository = {
     updatedAt: string;
   }>) {
     const values = records.map((record) => ({
-      ...record,
+      id: record.id,
+      key: record.key,
+      displayName: record.displayName,
+      emailAddress: record.emailAddress,
+      providerMode: record.providerMode,
+      connectionMode: record.connectionMode ?? "local_sandbox",
+      gmailMailboxAddress: record.gmailMailboxAddress ?? null,
+      gmailLabelFilter: record.gmailLabelFilter ?? null,
+      allowedSenderPatternsJson: toJson(record.allowedSenderPatterns ?? []),
+      allowedOutboundRecipientPatternsJson: toJson(record.allowedOutboundRecipientPatterns ?? []),
+      enableLiveRead: record.enableLiveRead ?? false,
+      enableLiveDrafts: record.enableLiveDrafts ?? false,
+      enableLiveSend: record.enableLiveSend ?? false,
+      defaultModelProvider: record.defaultModelProvider ?? "mock",
+      gmailHistoryId: record.gmailHistoryId ?? null,
+      defaultToneProfileId: record.defaultToneProfileId,
+      defaultAutomationProfileId: record.defaultAutomationProfileId,
+      escalationTarget: record.escalationTarget,
+      allowMockAutoSend: record.allowMockAutoSend,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
       enabledIntentsJson: toJson(record.enabledIntents)
     }));
 

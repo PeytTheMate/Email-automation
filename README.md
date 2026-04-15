@@ -1,17 +1,20 @@
-# Email Automation Sandbox
+# Email Automation Platform
 
-Local-first email automation sandbox for a Google Workspace business. V1 runs entirely on a developer laptop, keeps all business facts in structured local data, and routes risky messages conservatively into draft or escalation paths.
+Dual-mode email automation platform for a Google Workspace business. The repo now supports a safe local sandbox by default and a tightly gated Gmail demo pilot mode for one reviewed mailbox at a time.
 
 ## What this ships
 
+- Dual-mode mailbox operation: `local_sandbox` and `gmail_test`
 - Local inbox simulator for pasted emails and replayable scenarios
-- Deterministic-first intent classification with a pluggable local model provider layer
+- Gmail polling sync for allowlisted demo mailboxes
+- Deterministic-first intent classification with pluggable local and hosted model provider layers
 - Structured local knowledge retrieval for hours, location, booking, required documents, and parking
 - Conservative policy engine with `auto_send_allowed`, `draft_only`, `escalate`, and `blocked`
-- Config-driven tone profiles, automation profiles, mailbox settings, and user defaults
-- Review dashboard for inbox, email detail, grounded draft review, audit trail, settings, and local outbox
+- Config-driven tone profiles, automation profiles, mailbox settings, user defaults, allowlists, and provider controls
+- Review dashboard for inbox, email detail, Gmail sync, grounded draft review, audit trail, settings, and delivery log
 - SQLite-backed state with a separate API shell, worker shell, and shared core domain logic
-- Unit and integration tests for the main safety-critical paths
+- Real Gmail draft creation and reviewed send paths behind feature flags
+- Unit and integration tests for the main safety-critical paths, including Gmail/provider regressions
 
 ## Stack
 
@@ -74,6 +77,21 @@ npm run dev
 - Web UI: [http://localhost:5173](http://localhost:5173)
 - API health: [http://localhost:4000/api/health](http://localhost:4000/api/health)
 
+## Runtime modes
+
+### Local sandbox
+
+- default seeded path
+- supports replay, manual paste, local outbox, and mock auto-send for safe FAQ scenarios
+- safest mode for development and leadership demos
+
+### Gmail demo pilot
+
+- seeded as `Gmail Demo Pilot`
+- requires Gmail OAuth refresh-token env vars plus `ENABLE_GMAIL_READ`, `ENABLE_GMAIL_DRAFTS`, and `ENABLE_GMAIL_SEND`
+- only syncs and sends for allowlisted test senders/recipients
+- supports `Sync Gmail Now`, `Create Gmail Draft`, and reviewed live send from the UI
+
 ## Useful commands
 
 ```bash
@@ -104,6 +122,24 @@ docker compose up
 6. Open `I Need A Refund`, `Upset With Service`, or `Prompt Injection Email` to show conservative escalation with no unsupported reply.
 
 See `docs/demo-script.md` for a polished walkthrough.
+
+## Gmail demo setup
+
+1. Fill in the Gmail and remote-model variables in `.env`.
+2. Keep the seeded `mailbox-gmail-demo` mailbox on a dedicated Gmail test account or test label.
+3. Turn on the Gmail feature flags you need:
+
+```bash
+ENABLE_GMAIL_READ=true
+ENABLE_GMAIL_DRAFTS=true
+ENABLE_GMAIL_SEND=true
+ENABLE_REMOTE_MODELS=true
+DEFAULT_MODEL_PROVIDER=remote
+```
+
+4. Start the stack with `npm run dev`.
+5. In the dashboard, select `Gmail Demo Pilot` and click `Sync Gmail Now`.
+6. Review the generated reply, optionally click `Create Gmail Draft`, then use `Approve & Send Live Reply`.
 
 ## How to use the app
 
@@ -150,19 +186,20 @@ The current implementation has been verified with:
 - `npm run build`
 - `npm run lint`
 - `npm test`
-- API startup and `/api/health` response locally
+- Gmail adapter unit coverage
+- hosted-model validation coverage
 
 ## Current scope notes
 
 - The `Settings` tab is a read-only seeded configuration snapshot, not a live admin editor yet.
 - The audit trail includes related message, draft, job, and outbox events for the selected message.
-- Local bootstrap only supports `DEFAULT_EMAIL_PROVIDER=local`, `DEFAULT_SEND_PROVIDER=local`, and `DEFAULT_MODEL_PROVIDER=mock|ollama`.
+- Gmail uses polling-first sync and env-provided OAuth credentials for the first pilot.
+- Live Gmail send remains review-only; unattended live auto-send is still intentionally out of scope.
 
 ## Phase 2 ideas
 
-- Gmail message ingestion and watch handling
-- Gmail draft and send providers
+- Gmail watch / history-driven sync instead of polling
 - Role-based mailbox and employee settings UI
 - Attachment parsing
 - Richer workflow automations and CRM/calendar integrations
-- Remote model providers behind the same current policy/budget boundaries
+- stronger secrets management, RBAC, and regulated-data controls

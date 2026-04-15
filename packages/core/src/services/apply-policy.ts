@@ -153,6 +153,7 @@ export function applyPolicy(context: PolicyContext): PolicyDecision {
   const meetsAutoSendThreshold =
     classification.confidence >= automationProfile.confidenceThresholdAutoSend &&
     automationProfile.allowedAutoSendIntents.includes(classification.intent) &&
+    mailbox.connectionMode === "local_sandbox" &&
     mailbox.allowMockAutoSend &&
     automationProfile.approvalMode === "mock_auto_send";
 

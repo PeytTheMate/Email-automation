@@ -1,4 +1,5 @@
 import type {
+  DeliveryMode,
   DraftReply,
   ExtractedEntities,
   Intent,
@@ -52,20 +53,45 @@ export type GenerationResult = Pick<
   "subject" | "body" | "confidenceNote" | "generationMetadata"
 >;
 
-export type MockSendRequest = {
+export type SyncedInboundMessage = {
+  providerName: string;
+  sourceMessageKey: string;
+  externalMessageId: string;
+  externalThreadId: string | null;
+  externalHistoryId: string | null;
+  senderEmail: string;
+  senderName: string | null;
+  recipients: string[];
+  ccRecipients: string[];
+  subject: string;
+  rawBody: string;
+  receivedAt: string;
+};
+
+export type EmailSyncResult = {
+  providerName: string;
+  nextSyncCursor: string | null;
+  messages: SyncedInboundMessage[];
+};
+
+export type DeliveryRequest = {
   messageId: string;
+  mailbox: MailboxSettings;
   draft: DraftReply;
   recipientEmail: string;
-  deliveryMode: OutboxMessage["deliveryMode"];
+  deliveryMode: DeliveryMode;
+  operatorUserId?: string | null;
+  externalThreadId?: string | null;
+  externalMessageId?: string | null;
 };
 
 export interface EmailProvider {
   providerName: string;
-  listMessages(): Promise<unknown[]>;
-  getMessage(messageId: string): Promise<unknown>;
-  createDraft(): Promise<never>;
-  sendReply(): Promise<never>;
-  acknowledgeEvent(eventId: string): Promise<void>;
+  listMessages(args: {
+    mailbox: MailboxSettings;
+    limit?: number;
+    syncCursor?: string | null;
+  }): Promise<EmailSyncResult>;
 }
 
 export interface ModelProvider {
@@ -86,7 +112,15 @@ export interface KnowledgeProvider {
 
 export interface SendProvider {
   providerName: string;
-  sendMockReply(request: MockSendRequest): Promise<OutboxMessage>;
+  createDraft(request: DeliveryRequest): Promise<OutboxMessage>;
+  sendReply(request: DeliveryRequest): Promise<OutboxMessage>;
+}
+
+export interface ProviderRegistry {
+  getEmailProvider(mailbox: MailboxSettings): EmailProvider;
+  getModelProvider(mailbox: MailboxSettings): ModelProvider;
+  getKnowledgeProvider(mailbox: MailboxSettings): KnowledgeProvider;
+  getSendProvider(mailbox: MailboxSettings): SendProvider;
 }
 
 export type PolicyContext = {

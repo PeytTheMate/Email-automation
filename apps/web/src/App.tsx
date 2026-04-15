@@ -147,6 +147,10 @@ export function App() {
     () => (dashboard?.users ?? []).filter((user) => user.mailboxId === mailboxId),
     [dashboard?.users, mailboxId]
   );
+  const currentMailbox = useMemo(
+    () => (dashboard?.mailboxes ?? []).find((mailbox) => mailbox.id === mailboxId) ?? null,
+    [dashboard?.mailboxes, mailboxId]
+  );
 
   useEffect(() => {
     if (mailboxUsers.length === 0) {
@@ -203,6 +207,14 @@ export function App() {
             Live inbox sandbox with queue visibility, replayable scenario scoring, grounded drafts,
             and a safe local outbox for reviewable demos.
           </p>
+          {dashboard?.providerStatus ? (
+            <div className="badge-row">
+              <StatusBadge label={`gmail read ${dashboard.providerStatus.gmailReadEnabled ? "on" : "off"}`} tone={dashboard.providerStatus.gmailReadEnabled ? "good" : "warn"} />
+              <StatusBadge label={`gmail drafts ${dashboard.providerStatus.gmailDraftsEnabled ? "on" : "off"}`} tone={dashboard.providerStatus.gmailDraftsEnabled ? "good" : "warn"} />
+              <StatusBadge label={`gmail send ${dashboard.providerStatus.gmailSendEnabled ? "on" : "off"}`} tone={dashboard.providerStatus.gmailSendEnabled ? "good" : "warn"} />
+              <StatusBadge label={`remote models ${dashboard.providerStatus.remoteModelsEnabled ? "on" : "off"}`} tone={dashboard.providerStatus.remoteModelsEnabled ? "good" : "warn"} />
+            </div>
+          ) : null}
         </div>
         <div className="hero__actions">
           <button
@@ -245,6 +257,20 @@ export function App() {
             disabled={loading}
           >
             Process Pending
+          </button>
+          <button
+            onClick={() =>
+              runAction(async () => {
+                await fetchJson(`/mailboxes/${mailboxId}/sync`, {
+                  method: "POST",
+                  body: JSON.stringify({ limit: 10 })
+                });
+                setActiveTab("inbox");
+              })
+            }
+            disabled={loading || currentMailbox?.connectionMode !== "gmail_test"}
+          >
+            Sync Gmail Now
           </button>
         </div>
       </header>
@@ -468,6 +494,8 @@ export function App() {
                   <div className="message-row__subject">{message.subject}</div>
                   <div className="message-row__meta">
                     <StatusBadge label={message.status} tone={toneForStatus(message.status)} />
+                    {message.sourceType ? <StatusBadge label={message.sourceType} tone="neutral" /> : null}
+                    {message.providerName ? <StatusBadge label={message.providerName} tone="neutral" /> : null}
                     {message.policyDecision ? <StatusBadge label={message.policyDecision.action} tone={toneForPolicy(message.policyDecision.action)} /> : null}
                   </div>
                 </button>
@@ -487,6 +515,7 @@ export function App() {
                       <>
                         <p><strong>Thread:</strong> {detail.thread.subject}</p>
                         <p><strong>Status:</strong> {detail.thread.status}</p>
+                        <p><strong>Provider:</strong> {detail.thread.providerName ?? "local"} / thread {detail.thread.externalThreadId ?? "local-only"}</p>
                         <p><strong>Current intent:</strong> {detail.thread.currentIntent ?? "Not set yet"}</p>
                         {detail.threadMessages.length > 0 ? (
                           <ul className="simple-list">
@@ -515,6 +544,8 @@ export function App() {
                   <div>
                     <h3>Extracted entities</h3>
                     <pre>{JSON.stringify(detail.classification?.extractedEntities ?? {}, null, 2)}</pre>
+                    <p><strong>Source provider:</strong> {detail.message.providerName ?? "local"}</p>
+                    <p><strong>External message:</strong> {detail.message.externalMessageId ?? "not linked"}</p>
                     {detail.actingUser ? (
                       <>
                         <p><strong>Acting user:</strong> {detail.actingUser.name} ({detail.actingUser.role})</p>
@@ -558,21 +589,40 @@ export function App() {
                         <p><strong>Generation:</strong> {detail.draft.generationMetadata.provider} ({detail.draft.generationMetadata.mode})</p>
                         <p><strong>Tone profile:</strong> {detail.draft.toneProfileId ?? "Unknown"}</p>
                         <p><strong>Confidence note:</strong> {detail.draft.confidenceNote}</p>
+                        <p><strong>Transport draft:</strong> {detail.draft.providerName ?? "not created"} / {detail.draft.externalDraftId ?? "local-only"}</p>
                         <textarea rows={10} value={draftBody || detail.draft.body} onChange={(event) => setDraftBody(event.target.value)} />
                         <div className="button-row">
+                          <button
+                            className="button-secondary"
+                            disabled={loading || currentMailbox?.connectionMode !== "gmail_test"}
+                            onClick={() =>
+                              runAction(async () => {
+                                await fetchJson(`/drafts/${detail.draft?.id}/provider-draft`, {
+                                  method: "POST",
+                                  body: JSON.stringify({ operatorUserId: actingUserId || detail.message.actorUserId || null })
+                                });
+                                setActiveTab("outbox");
+                              })
+                            }
+                          >
+                            Create Gmail Draft
+                          </button>
                           <button
                             disabled={loading}
                             onClick={() =>
                               runAction(async () => {
                                 await fetchJson(`/drafts/${detail.draft?.id}/send`, {
                                   method: "POST",
-                                  body: JSON.stringify({ editedBody: draftBody || detail.draft?.body })
+                                  body: JSON.stringify({
+                                    editedBody: draftBody || detail.draft?.body,
+                                    operatorUserId: actingUserId || detail.message.actorUserId || null
+                                  })
                                 });
                                 setActiveTab("outbox");
                               })
                             }
                           >
-                            Approve & Send
+                            {currentMailbox?.connectionMode === "gmail_test" ? "Approve & Send Live Reply" : "Approve & Send"}
                           </button>
                           <button
                             className="button-secondary"
@@ -633,7 +683,7 @@ export function App() {
       ) : null}
 
       {activeTab === "outbox" ? (
-        <SectionCard title="Local Outbox" subtitle={`${dashboard?.outbox.length ?? 0} replies stored locally`}>
+        <SectionCard title="Delivery Log" subtitle={`${dashboard?.outbox.length ?? 0} reply event(s) recorded`}>
           <div className="outbox-list">
             {(dashboard?.outbox ?? []).map((item) => (
               <article key={item.id} className="outbox-item">
@@ -642,6 +692,9 @@ export function App() {
                   <StatusBadge label={item.deliveryMode} tone="good" />
                 </div>
                 <p>{item.recipientEmail}</p>
+                <p><strong>Provider:</strong> {item.providerName} / <strong>Status:</strong> {item.deliveryStatus}</p>
+                {item.externalDraftId ? <p><strong>External draft:</strong> {item.externalDraftId}</p> : null}
+                {item.externalMessageId ? <p><strong>External message:</strong> {item.externalMessageId}</p> : null}
                 <p>{formatDate(item.sentAt)}</p>
                 <pre className="preview-pre">{item.body}</pre>
                 <div className="button-row">
@@ -659,7 +712,7 @@ export function App() {
         <div className="settings-grid">
           <SectionCard title="Mailboxes" subtitle="Seeded local configuration snapshot for mailbox-level defaults">
             <ul className="simple-list">
-              {dashboard.mailboxes.map((mailbox) => <li key={mailbox.id}><strong>{mailbox.displayName}</strong>: tone `{mailbox.defaultToneProfileId}`, automation `{mailbox.defaultAutomationProfileId}`, mock auto-send {mailbox.allowMockAutoSend ? "enabled" : "disabled"}.</li>)}
+              {dashboard.mailboxes.map((mailbox) => <li key={mailbox.id}><strong>{mailbox.displayName}</strong>: {mailbox.connectionMode}, model `{mailbox.defaultModelProvider}`, tone `{mailbox.defaultToneProfileId}`, automation `{mailbox.defaultAutomationProfileId}`, live read {mailbox.enableLiveRead ? "on" : "off"}, live drafts {mailbox.enableLiveDrafts ? "on" : "off"}, live send {mailbox.enableLiveSend ? "on" : "off"}.</li>)}
             </ul>
           </SectionCard>
           <SectionCard title="Automation Profiles" subtitle="Seeded thresholds and approval modes">

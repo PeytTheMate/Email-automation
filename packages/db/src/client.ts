@@ -69,6 +69,16 @@ export function initializeDatabase() {
       display_name TEXT NOT NULL,
       email_address TEXT,
       provider_mode TEXT NOT NULL,
+      connection_mode TEXT NOT NULL DEFAULT 'local_sandbox',
+      gmail_mailbox_address TEXT,
+      gmail_label_filter TEXT,
+      allowed_sender_patterns_json TEXT NOT NULL DEFAULT '[]',
+      allowed_outbound_recipient_patterns_json TEXT NOT NULL DEFAULT '[]',
+      enable_live_read INTEGER NOT NULL DEFAULT 0,
+      enable_live_drafts INTEGER NOT NULL DEFAULT 0,
+      enable_live_send INTEGER NOT NULL DEFAULT 0,
+      default_model_provider TEXT NOT NULL DEFAULT 'mock',
+      gmail_history_id TEXT,
       default_tone_profile_id TEXT NOT NULL,
       default_automation_profile_id TEXT NOT NULL,
       escalation_target TEXT NOT NULL,
@@ -149,6 +159,9 @@ export function initializeDatabase() {
       mailbox_id TEXT NOT NULL,
       subject TEXT NOT NULL,
       latest_message_id TEXT NOT NULL,
+      provider_name TEXT NOT NULL DEFAULT 'local-email-sandbox',
+      external_thread_id TEXT,
+      latest_external_history_id TEXT,
       current_intent TEXT,
       status TEXT NOT NULL,
       created_at TEXT NOT NULL,
@@ -162,6 +175,10 @@ export function initializeDatabase() {
       thread_id TEXT NOT NULL,
       actor_user_id TEXT,
       source_message_key TEXT,
+      provider_name TEXT NOT NULL DEFAULT 'local-email-sandbox',
+      external_message_id TEXT,
+      external_thread_id TEXT,
+      external_history_id TEXT,
       sender_email TEXT NOT NULL,
       sender_name TEXT,
       recipients_json TEXT NOT NULL,
@@ -208,6 +225,9 @@ export function initializeDatabase() {
       subject TEXT NOT NULL,
       body TEXT NOT NULL,
       tone_profile_id TEXT NOT NULL,
+      provider_name TEXT NOT NULL DEFAULT 'internal-draft',
+      external_draft_id TEXT,
+      external_message_id TEXT,
       retrieved_fact_keys_json TEXT NOT NULL,
       confidence_note TEXT NOT NULL,
       generation_metadata_json TEXT NOT NULL,
@@ -222,6 +242,12 @@ export function initializeDatabase() {
       recipient_email TEXT NOT NULL,
       subject TEXT NOT NULL,
       body TEXT NOT NULL,
+      provider_name TEXT NOT NULL,
+      external_draft_id TEXT,
+      external_message_id TEXT,
+      delivery_status TEXT NOT NULL,
+      failure_reason TEXT,
+      operator_user_id TEXT,
       sent_at TEXT NOT NULL,
       delivery_mode TEXT NOT NULL
     );
@@ -247,9 +273,35 @@ export function initializeDatabase() {
   `);
 
   ensureColumn(database, "knowledge_documents", "mailbox_keys_json", "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(database, "mailboxes", "connection_mode", "TEXT NOT NULL DEFAULT 'local_sandbox'");
+  ensureColumn(database, "mailboxes", "gmail_mailbox_address", "TEXT");
+  ensureColumn(database, "mailboxes", "gmail_label_filter", "TEXT");
+  ensureColumn(database, "mailboxes", "allowed_sender_patterns_json", "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(database, "mailboxes", "allowed_outbound_recipient_patterns_json", "TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn(database, "mailboxes", "enable_live_read", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(database, "mailboxes", "enable_live_drafts", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(database, "mailboxes", "enable_live_send", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(database, "mailboxes", "default_model_provider", "TEXT NOT NULL DEFAULT 'mock'");
+  ensureColumn(database, "mailboxes", "gmail_history_id", "TEXT");
   ensureColumn(database, "messages", "actor_user_id", "TEXT");
   ensureColumn(database, "messages", "source_message_key", "TEXT");
+  ensureColumn(database, "messages", "provider_name", "TEXT NOT NULL DEFAULT 'local-email-sandbox'");
+  ensureColumn(database, "messages", "external_message_id", "TEXT");
+  ensureColumn(database, "messages", "external_thread_id", "TEXT");
+  ensureColumn(database, "messages", "external_history_id", "TEXT");
+  ensureColumn(database, "threads", "provider_name", "TEXT NOT NULL DEFAULT 'local-email-sandbox'");
+  ensureColumn(database, "threads", "external_thread_id", "TEXT");
+  ensureColumn(database, "threads", "latest_external_history_id", "TEXT");
   ensureColumn(database, "policy_decisions", "escalation_target", "TEXT");
+  ensureColumn(database, "drafts", "provider_name", "TEXT NOT NULL DEFAULT 'internal-draft'");
+  ensureColumn(database, "drafts", "external_draft_id", "TEXT");
+  ensureColumn(database, "drafts", "external_message_id", "TEXT");
+  ensureColumn(database, "outbox_messages", "provider_name", "TEXT NOT NULL DEFAULT 'local-outbox'");
+  ensureColumn(database, "outbox_messages", "external_draft_id", "TEXT");
+  ensureColumn(database, "outbox_messages", "external_message_id", "TEXT");
+  ensureColumn(database, "outbox_messages", "delivery_status", "TEXT NOT NULL DEFAULT 'sent'");
+  ensureColumn(database, "outbox_messages", "failure_reason", "TEXT");
+  ensureColumn(database, "outbox_messages", "operator_user_id", "TEXT");
   ensureColumn(database, "processing_jobs", "next_retry_at", "TEXT");
   ensureColumn(database, "scenarios", "replay_received_at", "TEXT");
   database.exec(

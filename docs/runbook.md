@@ -52,6 +52,19 @@ curl http://localhost:4000/api/health
 6. Approve or reject the draft.
 7. Inspect `Outbox` for mock-delivered replies.
 
+### Gmail demo pilot flow
+
+1. Configure the Gmail and hosted-model env vars in `.env`.
+2. Turn on `ENABLE_GMAIL_READ=true`.
+3. Turn on `ENABLE_GMAIL_DRAFTS=true` if you want provider draft creation.
+4. Turn on `ENABLE_GMAIL_SEND=true` only for allowlisted test recipients.
+5. Select `Gmail Demo Pilot` in the dashboard.
+6. Click `Sync Gmail Now`.
+7. Open the synced message from the inbox.
+8. Review the grounded draft.
+9. Optionally click `Create Gmail Draft`.
+10. Click `Approve & Send Live Reply` for a reviewed live send.
+
 ## Build, lint, and test
 
 ```bash
@@ -130,6 +143,26 @@ Check:
 4. auto-send confidence threshold
 5. risk flags and retrieval success
 
+### Gmail sync returned nothing
+
+Check:
+
+1. `ENABLE_GMAIL_READ=true`
+2. `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, and `GMAIL_REFRESH_TOKEN` are set
+3. the selected mailbox is `gmail_test`
+4. the Gmail account has the configured demo label
+5. the sender is on the mailbox or env allowlist
+
+### Gmail draft or send failed
+
+Check:
+
+1. `ENABLE_GMAIL_DRAFTS` or `ENABLE_GMAIL_SEND`
+2. outbound recipient allowlist
+3. selected mailbox live-delivery toggles
+4. the message has a generated draft and was not escalated/blocked
+5. the audit trail for `provider_draft_created` or live-send errors
+
 ### Message looks wrong factually
 
 Check:
@@ -160,7 +193,12 @@ For the curated showcase state, follow reset with `Run Demo Pack` in the UI.
 
 ### Gmail provider
 
-Implement `EmailProvider` in `packages/providers/email-gmail/src/index.ts` and route the API/worker bootstrap to choose it when Gmail feature flags are enabled. The current local bootstrap intentionally rejects non-local email/send providers.
+The current Gmail provider already supports polling sync, Gmail draft creation, and reviewed send. Extend it next with:
+
+- label state reconciliation
+- watch/history renewal
+- richer MIME parsing
+- more robust OAuth credential storage
 
 ### Local LLM provider
 
@@ -176,4 +214,4 @@ The core generator path already supports the provider interface. Keep policy unc
 
 ### Hosted model provider
 
-Implement `ModelProvider` in `packages/providers/model-remote/src/index.ts` and preserve the current local-only defaults and conservative policy checks.
+The current hosted model provider uses the Responses API shape and validates output before draft persistence. Preserve the same conservative checks when adding more providers.

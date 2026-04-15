@@ -11,23 +11,31 @@ import {
   ingestEmail,
   processPendingJobs,
   approveDraftAndSend,
+  createDraftInProvider,
   rejectDraft,
   buildScenarioRunResults,
   replayScenarios,
-  runDemoPack
+  runDemoPack,
+  syncMailbox
 } from "../../../packages/core/src/index.js";
 import {
   createLocalProviders,
-  ensureLocalBootstrap
+  createRuntimeProviderRegistry,
+  ensureRuntimeBootstrap
 } from "../../../packages/testing/src/bootstrap-local.js";
 import { seedLocalData } from "../../../packages/testing/src/seed-local-data.js";
 
 const config = getConfig();
 const providers = createLocalProviders();
+const providerRegistry = createRuntimeProviderRegistry();
 
 const app = Fastify({
   logger: false
 });
+
+function resolveMailboxRecipient(mailbox: { emailAddress: string | null; gmailMailboxAddress?: string | null }) {
+  return mailbox.emailAddress ?? mailbox.gmailMailboxAddress ?? "frontdesk@example.local";
+}
 
 await app.register(cors, {
   origin: true
@@ -64,6 +72,12 @@ function getDashboardPayload() {
     scenarios: settingsRepository.listScenarios(),
     scenarioResults: buildScenarioRunResults(),
     users: settingsRepository.listUsers(),
+    providerStatus: {
+      gmailReadEnabled: config.ENABLE_GMAIL_READ,
+      gmailDraftsEnabled: config.ENABLE_GMAIL_DRAFTS,
+      gmailSendEnabled: config.ENABLE_GMAIL_SEND,
+      remoteModelsEnabled: config.ENABLE_REMOTE_MODELS
+    },
     lastRefreshedAt: new Date().toISOString()
   };
 }
@@ -74,6 +88,13 @@ app.get("/api/health", async () => ({
 }));
 
 app.get("/api/dashboard", async () => getDashboardPayload());
+
+app.get("/api/providers/status", async () => ({
+  gmailReadEnabled: config.ENABLE_GMAIL_READ,
+  gmailDraftsEnabled: config.ENABLE_GMAIL_DRAFTS,
+  gmailSendEnabled: config.ENABLE_GMAIL_SEND,
+  remoteModelsEnabled: config.ENABLE_REMOTE_MODELS
+}));
 
 app.get("/api/messages/:messageId", async (request, reply) => {
   const params = request.params as { messageId: string };
@@ -93,6 +114,10 @@ app.get("/api/messages/:messageId", async (request, reply) => {
       ...messageRepository.get(params.messageId),
       actorUserId: message.actorUserId ?? null,
       sourceMessageKey: message.sourceMessageKey ?? null,
+      providerName: message.providerName,
+      externalMessageId: message.externalMessageId ?? null,
+      externalThreadId: message.externalThreadId ?? null,
+      externalHistoryId: message.externalHistoryId ?? null,
       normalizedBodyText: message.normalizedBodyText,
       strippedQuotedText: message.strippedQuotedText,
       attachmentMetadata: JSON.parse(message.attachmentMetadataJson),
@@ -135,7 +160,7 @@ app.post("/api/messages/manual", async (request) => {
         : `manual:${body.mailboxId}:${body.senderEmail}:${body.subject}:${body.rawBody}`,
       senderEmail: body.senderEmail,
       senderName: body.senderName ?? null,
-      recipients: [mailbox.emailAddress ?? "frontdesk@example.local"],
+      recipients: [resolveMailboxRecipient(mailbox)],
     subject: body.subject,
     rawBody: body.rawBody
   });
@@ -163,8 +188,25 @@ app.post("/api/scenarios/replay", async (request) => {
 });
 
 app.post("/api/jobs/process-pending", async () => {
-  const processed = await processPendingJobs(providers);
+  const processed = await processPendingJobs({ providerRegistry });
   return {
+    processedCount: processed.length
+  };
+});
+
+app.post("/api/mailboxes/:mailboxId/sync", async (request) => {
+  const params = request.params as { mailboxId: string };
+  const body = (request.body ?? {}) as { limit?: number };
+  const synced = await syncMailbox({
+    mailboxId: params.mailboxId,
+    providerRegistry,
+    limit: body.limit
+  });
+
+  const processed = await processPendingJobs({ providerRegistry });
+  return {
+    syncedCount: synced.syncedCount,
+    ingestedCount: synced.ingested.length,
     processedCount: processed.length
   };
 });
@@ -184,11 +226,26 @@ app.get("/api/settings", async () => ({
 
 app.post("/api/drafts/:draftId/send", async (request) => {
   const params = request.params as { draftId: string };
-  const body = request.body as { editedBody?: string };
+  const body = request.body as { editedBody?: string; operatorUserId?: string | null };
   const outboxMessage = await approveDraftAndSend({
     draftId: params.draftId,
     editedBody: body.editedBody,
-    sendProvider: providers.sendProvider
+    operatorUserId: body.operatorUserId ?? null,
+    providerRegistry
+  });
+
+  return {
+    outboxMessage
+  };
+});
+
+app.post("/api/drafts/:draftId/provider-draft", async (request) => {
+  const params = request.params as { draftId: string };
+  const body = request.body as { operatorUserId?: string | null };
+  const outboxMessage = await createDraftInProvider({
+    draftId: params.draftId,
+    operatorUserId: body.operatorUserId ?? null,
+    providerRegistry
   });
 
   return {
@@ -237,7 +294,7 @@ app.post("/api/demo/run", async (request) => {
 });
 
 async function start() {
-  await ensureLocalBootstrap();
+  await ensureRuntimeBootstrap();
   await app.listen({
     host: "0.0.0.0",
     port: config.PORT

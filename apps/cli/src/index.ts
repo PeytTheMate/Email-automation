@@ -1,15 +1,19 @@
 import { settingsRepository } from "../../../packages/db/src/index.js";
 import { ingestEmail, processPendingJobs } from "../../../packages/core/src/index.js";
-import { LocalKnowledgeProvider } from "../../../packages/providers/knowledge-local/src/index.js";
 import {
-  MockModelProvider
-} from "../../../packages/providers/model-local/src/index.js";
-import { LocalSendProvider } from "../../../packages/providers/send-local/src/index.js";
+  createRuntimeProviderRegistry,
+  ensureRuntimeBootstrap
+} from "../../../packages/testing/src/bootstrap-local.js";
 
 const command = process.argv[2];
-const modelProvider = new MockModelProvider();
-const knowledgeProvider = new LocalKnowledgeProvider();
-const sendProvider = new LocalSendProvider();
+const providerRegistry = createRuntimeProviderRegistry();
+
+function resolveMailboxRecipient(mailbox: {
+  emailAddress: string | null;
+  gmailMailboxAddress?: string | null;
+}) {
+  return mailbox.emailAddress ?? mailbox.gmailMailboxAddress ?? "frontdesk@example.local";
+}
 
 async function replayScenario(key?: string) {
   const mailbox = settingsRepository.getMailboxByKey("frontdesk");
@@ -27,7 +31,7 @@ async function replayScenario(key?: string) {
       scenarioId: scenario.id,
       senderEmail: scenario.senderEmail,
       senderName: scenario.senderName,
-      recipients: [mailbox.emailAddress ?? "frontdesk@example.local"],
+      recipients: [resolveMailboxRecipient(mailbox)],
       subject: scenario.subject,
       rawBody: scenario.body,
       receivedAt: scenario.replayReceivedAt ?? undefined
@@ -35,24 +39,22 @@ async function replayScenario(key?: string) {
   }
 
   const processed = await processPendingJobs({
-    modelProvider,
-    knowledgeProvider,
-    sendProvider
+    providerRegistry
   });
 
   console.log(`Replayed ${processed.length} scenario(s).`);
 }
 
 async function run() {
+  await ensureRuntimeBootstrap();
+
   switch (command) {
     case "replay":
       await replayScenario(process.argv[3]);
       break;
     case "process-pending":
       await processPendingJobs({
-        modelProvider,
-        knowledgeProvider,
-        sendProvider
+        providerRegistry
       });
       console.log("Processed pending jobs.");
       break;
